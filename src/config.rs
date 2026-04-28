@@ -8,9 +8,10 @@ pub struct Config {
     /// The text to be printed on the label. Required unless --image is given.
     pub text: Option<String>,
 
-    /// Path to a pre-rendered label image (320x96, black = ink). Mutually exclusive with text.
+    /// Path to a pre-rendered label image (320x96, black = ink). Repeat the flag to
+    /// print multiple labels in one Bluetooth session. Mutually exclusive with text.
     #[arg(short, long, conflicts_with = "text")]
-    pub image: Option<String>,
+    pub image: Vec<String>,
 
     /// The MAC address of the D30 label maker. If not set, it will automatically scan for the D30. (Optional)
     #[arg(short, long)]

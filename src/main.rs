@@ -54,16 +54,21 @@ async fn print(config: &Config) -> Result<()> {
     //TODO: add option to connect with addr.
     let d30 = D30::new(config).await?;
 
-    let image = image_helper::generate_image(config)?;
-    let mut output = image_helper::IMG_PRECURSOR.to_vec();
+    let images = image_helper::generate_images(config)?;
+    let total = images.len();
+    info!("Printing {} label(s)", total);
 
-    for idx in 0..=(image.height() / 255) {
-        let chunk = image.clone().crop(0, idx * 255, image.width(), 255);
-        output.extend(image_helper::pack_image(&chunk));
-
-        d30.write(output.as_slice()).await?;
-
-        output.clear();
+    for (i, image) in images.iter().enumerate() {
+        if total > 1 {
+            info!("Label {}/{}", i + 1, total);
+        }
+        let mut output = image_helper::IMG_PRECURSOR.to_vec();
+        for idx in 0..=(image.height() / 255) {
+            let chunk = image.clone().crop(0, idx * 255, image.width(), 255);
+            output.extend(image_helper::pack_image(&chunk));
+            d30.write(output.as_slice()).await?;
+            output.clear();
+        }
     }
 
     Ok(())

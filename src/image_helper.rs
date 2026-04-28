@@ -17,16 +17,16 @@ pub const IMG_PRECURSOR: &[u8] = &[31, 17, 36, 0, 27, 64, 29, 118, 48, 0, 12, 0,
 
 const COLOR_BLACK: image::Rgb<u8> = Rgb([255u8, 255u8, 255u8]);
 
-pub fn generate_image(config: &Config) -> Result<DynamicImage> {
-    if let Some(path) = &config.image {
-        return load_image_file(path);
+pub fn generate_images(config: &Config) -> Result<Vec<DynamicImage>> {
+    if !config.image.is_empty() {
+        return config.image.iter().map(|p| load_image_file(p)).collect();
     }
 
     let text = config
         .text
         .as_deref()
         .ok_or_else(|| anyhow!("either --image or text argument must be provided"))?;
-    render_text_image(text, &config.font)
+    Ok(vec![render_text_image(text, &config.font)?])
 }
 
 fn render_text_image(text: &str, font_name: &Option<String>) -> Result<DynamicImage> {
