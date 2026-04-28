@@ -4,23 +4,37 @@ use std::path::Path;
 
 use crate::config::Config;
 use anyhow::{Context, Result, anyhow};
-use image::{self, DynamicImage, ImageBuffer, Rgb};
+use image::{self, DynamicImage, ImageBuffer, Rgb, imageops};
 use log::trace;
 use rusttype::{Font, Scale};
 
 use dimensions::*;
+
+const LABEL_WIDTH: u32 = 320;
+const LABEL_HEIGHT: u32 = 96;
 
 pub const IMG_PRECURSOR: &[u8] = &[31, 17, 36, 0, 27, 64, 29, 118, 48, 0, 12, 0, 64, 1]; // 1f1124001b401d7630000c004001
 
 const COLOR_BLACK: image::Rgb<u8> = Rgb([255u8, 255u8, 255u8]);
 
 pub fn generate_image(config: &Config) -> Result<DynamicImage> {
-    let label_dimensions = Dimensions::new(320, 96);
+    if let Some(path) = &config.image {
+        return load_image_file(path);
+    }
+
+    let text = config
+        .text
+        .as_deref()
+        .ok_or_else(|| anyhow!("either --image or text argument must be provided"))?;
+    render_text_image(text, &config.font)
+}
+
+fn render_text_image(text: &str, font_name: &Option<String>) -> Result<DynamicImage> {
+    let label_dimensions = Dimensions::new(LABEL_WIDTH as i32, LABEL_HEIGHT as i32);
     trace!("{:#?}", &label_dimensions);
 
-    let font = load_font(&config.font)?;
+    let font = load_font(font_name)?;
     let font = Font::try_from_vec(font).context("Could not init font.")?;
-    let text = &config.text;
 
     //TODO - calcuate scale.
     let default_margins = 15.;
@@ -62,6 +76,27 @@ pub fn generate_image(config: &Config) -> Result<DynamicImage> {
     let canvas = DynamicImage::from(canvas).rotate270();
 
     Ok(canvas)
+}
+
+fn load_image_file(path: &str) -> Result<DynamicImage> {
+    let img = image::open(path).with_context(|| format!("Could not open image: {}", path))?;
+    let img = if img.width() == LABEL_WIDTH && img.height() == LABEL_HEIGHT {
+        img
+    } else {
+        info!(
+            "Resizing image from {}x{} to {}x{}",
+            img.width(),
+            img.height(),
+            LABEL_WIDTH,
+            LABEL_HEIGHT
+        );
+        img.resize_exact(LABEL_WIDTH, LABEL_HEIGHT, imageops::FilterType::Lanczos3)
+    };
+
+    // The packer treats white pixels as ink, but users supply black-on-white images.
+    let mut rgb = img.to_rgb8();
+    imageops::invert(&mut rgb);
+    Ok(DynamicImage::ImageRgb8(rgb).rotate270())
 }
 
 pub fn pack_image(image: &DynamicImage) -> Vec<u8> {

@@ -5,8 +5,12 @@ use clap::{Parser, command};
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Config {
-    /// The text to be printed on the label.
-    pub text: String,
+    /// The text to be printed on the label. Required unless --image is given.
+    pub text: Option<String>,
+
+    /// Path to a pre-rendered label image (320x96, black = ink). Mutually exclusive with text.
+    #[arg(short, long, conflicts_with = "text")]
+    pub image: Option<String>,
 
     /// The MAC address of the D30 label maker. If not set, it will automatically scan for the D30. (Optional)
     #[arg(short, long)]
