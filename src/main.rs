@@ -55,19 +55,24 @@ async fn print(config: &Config) -> Result<()> {
     let d30 = D30::new(config).await?;
 
     let images = image_helper::generate_images(config)?;
-    let total = images.len();
+    let qty = config.quantity.max(1) as usize;
+    let total = images.len() * qty;
     info!("Printing {} label(s)", total);
 
-    for (i, image) in images.iter().enumerate() {
-        if total > 1 {
-            info!("Label {}/{}", i + 1, total);
-        }
-        let mut output = image_helper::IMG_PRECURSOR.to_vec();
-        for idx in 0..=(image.height() / 255) {
-            let chunk = image.clone().crop(0, idx * 255, image.width(), 255);
-            output.extend(image_helper::pack_image(&chunk));
-            d30.write(output.as_slice()).await?;
-            output.clear();
+    let mut label_num = 0;
+    for image in &images {
+        for _ in 0..qty {
+            label_num += 1;
+            if total > 1 {
+                info!("Label {}/{}", label_num, total);
+            }
+            let mut output = image_helper::IMG_PRECURSOR.to_vec();
+            for idx in 0..=(image.height() / 255) {
+                let chunk = image.clone().crop(0, idx * 255, image.width(), 255);
+                output.extend(image_helper::pack_image(&chunk));
+                d30.write(output.as_slice()).await?;
+                output.clear();
+            }
         }
     }
 

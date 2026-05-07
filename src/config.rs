@@ -24,6 +24,10 @@ pub struct Config {
     /// The timeout value for the Bluetooth scan, specified in seconds.
     #[arg(short, long, default_value = "5")]
     pub scan_time: Option<u64>,
+
+    /// Number of copies to print of each label. Each --image is printed this many times.
+    #[arg(short = 'q', long = "quantity", alias = "qty", default_value_t = 1)]
+    pub quantity: u32,
 }
 
 impl Config {
